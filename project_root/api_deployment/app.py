@@ -68,6 +68,53 @@ def has_brand(domain):
 def has_suspicious_tld(domain):
     return any(domain.endswith(tld) for tld in SUSPICIOUS_TLDS)
 
+def normalize_domain_for_typos(domain):
+    substitutions = {
+        '0': 'o',
+        '1': 'l',
+        '3': 'e',
+        '5': 's',
+        '7': 't',
+        '@': 'a',
+        '$': 's'
+    }
+    return ''.join(substitutions.get(c, c) for c in domain)
+
+
+def levenshtein(a, b):
+    if len(a) < len(b):
+        return levenshtein(b, a)
+
+    if len(b) == 0:
+        return len(a)
+
+    previous_row = range(len(b) + 1)
+    for i, c1 in enumerate(a):
+        current_row = [i + 1]
+        for j, c2 in enumerate(b):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+
+    return previous_row[-1]
+
+
+def detect_typosquat(domain):
+    clean = normalize_domain_for_typos(domain.lower())
+
+    for brand in BRANDS:
+        dist = levenshtein(clean, brand)
+
+        # 🔥 core logic
+        if dist == 1:
+            return f"Possible typo-squatting of '{brand}' (1 char difference)"
+        elif dist == 2 and len(clean) > 5:
+            return f"Likely typo-squatting of '{brand}'"
+
+    return None
+
 #Analyzer
 
 def analyze_domain_research(domain, score):
@@ -96,10 +143,15 @@ def analyze_domain_research(domain, score):
         insights.append("Excessively long domain")
 
     # Brand abuse
+    # Brand + typo detection
     brand = has_brand(d)
     if brand:
         insights.append(f"Brand impersonation ({brand})")
 
+    typo = detect_typosquat(d_clean)
+    if typo:
+        insights.append(typo)
+    
     # Suspicious TLD
     if has_suspicious_tld(d):
         insights.append("High-risk TLD")
