@@ -195,10 +195,10 @@ def predict_domain():
     else:
         label = "MALICIOUS"
 
-    #llm_text = call_llm_summary(domain, score * 100)
-    #summary = summarize_llm_note(llm_text)
-    llm_text = "Analysis skipped for faster response"
-    summary = "Quick risk classification"
+    llm_text = call_llm_summary(domain, score * 100)
+    summary = summarize_llm_note(llm_text)
+    #llm_text = "Analysis skipped for faster response"
+    #summary = "Quick risk classification"
 
     store_score = round(score * 100, 2)
 
