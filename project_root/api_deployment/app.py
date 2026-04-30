@@ -115,6 +115,39 @@ def detect_typosquat(domain):
 
     return None
 
+def extract_domain_parts(domain):
+    parts = domain.lower().split('.')
+    
+    if len(parts) < 2:
+        return domain, []
+
+    root = parts[-2]  # main domain (example: google in google.com)
+    subdomains = parts[:-2]
+
+    return root, subdomains
+
+def detect_subdomain_phishing(domain):
+    root, subs = extract_domain_parts(domain)
+
+    if not subs:
+        return None
+
+    sub_str = ".".join(subs)
+
+    # 🔥 Check if brand appears in subdomain but NOT root
+    for brand in BRANDS:
+        if brand in sub_str and brand not in root:
+            return f"Brand '{brand}' found in subdomain (possible phishing)"
+
+    # 🔥 Keyword stacking
+    suspicious_keywords = ["login", "secure", "verify", "account", "update", "bank"]
+    keyword_hits = [k for k in suspicious_keywords if k in sub_str]
+
+    if len(keyword_hits) >= 2:
+        return "Suspicious keyword stacking in subdomain"
+
+    return None
+
 #Analyzer
 
 def analyze_domain_research(domain, score):
@@ -160,6 +193,9 @@ def analyze_domain_research(domain, score):
     if d.count('-') >= 2:
         insights.append("Multiple hyphens (phishing pattern)")
 
+    sub_phish = detect_subdomain_phishing(domain)
+    if sub_phish:
+        insights.append(sub_phish)
     # ML score fusion
     if score > 0.8:
         insights.append("High ML confidence")
@@ -171,6 +207,56 @@ def analyze_domain_research(domain, score):
 
     return " | ".join(insights)
 
+#Scoring Function
+
+def compute_risk_score(domain, ml_score):
+    score = 0
+
+    d = domain.lower()
+    d_clean = re.sub(r'[^a-z0-9]', '', d)
+
+    # 🔬 ML contribution (weighted)
+    score += ml_score * 50   # ML gets 50% weight
+
+    # 🔥 Entropy
+    if len(d_clean) > 0 and shannon_entropy(d_clean) > 3.8:
+        score += 10
+
+    # 🔥 Bigram (language)
+    if bigram_score(d_clean) < 0.02:
+        score += 10
+
+    # 🔥 Digit ratio
+    digit_ratio = sum(c.isdigit() for c in d_clean) / max(len(d_clean), 1)
+    if digit_ratio > 0.2:
+        score += 8
+
+    # 🔥 Length
+    if len(d_clean) > 20:
+        score += 6
+
+    # 🔥 Brand impersonation
+    if has_brand(d):
+        score += 10
+
+    # 🔥 Typo-squatting
+    if detect_typosquat(d_clean):
+        score += 12
+
+    # 🔥 Subdomain phishing
+    if detect_subdomain_phishing(d):
+        score += 12
+
+    # 🔥 Suspicious TLD
+    if has_suspicious_tld(d):
+        score += 8
+
+    # 🔥 Hyphens
+    if d.count('-') >= 2:
+        score += 5
+
+    # Clamp score
+    return min(round(score, 2), 100)
 
 # ================= FLASK INIT =================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -182,7 +268,6 @@ app = Flask(
 )
 
 # ================= LOAD MODEL =================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(BASE_DIR, "federated_transformer.h5")
 
 model = None
@@ -305,7 +390,8 @@ cached_metrics = None
 
 def compute_real_metrics():
     X, y_true = create_dataset()
-    y_pred_probs = model.predict(X, verbose=0).flatten()
+    model_instance = get_model()
+    y_pred_probs = model_instance.predict(X, verbose=0).flatten()
     y_pred = (y_pred_probs > 0.5).astype(int)
 
     return {
@@ -338,7 +424,6 @@ def explain():
     domain = request.args.get('domain', '')
     return render_template('explain.html', initial_domain=domain)
 
-
 @app.route('/predict', methods=['POST'])
 def predict_domain():
     data = request.get_json()
@@ -348,28 +433,30 @@ def predict_domain():
         return jsonify({"error": "No domain provided"}), 400
 
     x_input = preprocess_domain(domain)
-    score = float(get_model().predict(x_input, verbose=0)[0][0])
 
-    if score < 0.4:
+    model_instance = get_model()
+    score = float(model_instance.predict(x_input, verbose=0)[0][0])
+
+    # 🔥 Compute final risk
+    risk_score = compute_risk_score(domain, score)
+
+    # 🔥 Label from risk (not raw ML)
+    if risk_score < 30:
         label = "SAFE"
-    elif score <= 0.7:
+    elif risk_score < 70:
         label = "SUSPICIOUS"
     else:
         label = "MALICIOUS"
 
+    # 🔥 Explanation
     summary = analyze_domain_research(domain, score)
     llm_text = summary
-    #llm_text = call_llm_summary(domain, score * 100)
-    #summary = summarize_llm_note(llm_text, domain, score)
-    #llm_text = "Analysis skipped for faster response"
-    #summary = "Quick risk classification"
 
-    store_score = round(score * 100, 2)
-
+    # 🔥 Store
     insert_record(
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         domain,
-        store_score,
+        risk_score,
         label,
         llm_text,
         summary
@@ -377,12 +464,12 @@ def predict_domain():
 
     return jsonify({
         "domain": domain,
-        "malicious_score": score,
+        "ml_score": round(score * 100, 2),
+        "risk_score": risk_score,
         "label": label,
         "summary": summary,
         "llm_explanation": llm_text
     })
-
 
 @app.route('/metrics')
 # def metrics():
