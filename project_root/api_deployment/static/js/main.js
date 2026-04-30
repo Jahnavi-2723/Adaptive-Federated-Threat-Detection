@@ -81,7 +81,6 @@ function goFullAnalysis(){
 }
   */
 
-
 let lastPrediction = null;
 
 // ================= PREDICT =================
@@ -94,6 +93,13 @@ async function predict() {
     return;
   }
 
+  const resultDiv = document.getElementById("result");
+
+  // 🔄 Loading state
+  if (resultDiv) {
+    resultDiv.innerHTML = `<p style="color:#94a3b8;">Analyzing...</p>`;
+  }
+
   try {
     const res = await fetch("/predict", {
       method: "POST",
@@ -103,19 +109,22 @@ async function predict() {
       body: JSON.stringify({ domain })
     });
 
+    if (!res.ok) {
+      throw new Error("API failed");
+    }
+
     const data = await res.json();
     console.log("API RESPONSE:", data);
 
     lastPrediction = data;
 
-    // ✅ Safe values (prevents NaN)
-    const riskScore = Number(data.risk_score ?? 0);
-    const mlScore = Number(data.ml_score ?? 0);
-    const label = data.label ?? "UNKNOWN";
-    const summary = data.summary ?? "No insights available";
+    // ✅ Safe parsing (NO NaN EVER)
+    const riskScore = isNaN(Number(data.risk_score)) ? 0 : Number(data.risk_score);
+    const mlScore = isNaN(Number(data.ml_score)) ? 0 : Number(data.ml_score);
+    const label = data.label || "UNKNOWN";
+    const summary = data.summary || "No insights available";
 
-    // 🎯 Update result UI
-    const resultDiv = document.getElementById("result");
+    // 🎯 UI Update
     if (resultDiv) {
       resultDiv.innerHTML = `
         <h3>${summary}</h3>
@@ -131,7 +140,12 @@ async function predict() {
 
   } catch (err) {
     console.error("Prediction error:", err);
-    alert("Prediction failed. Try again.");
+
+    if (resultDiv) {
+      resultDiv.innerHTML = `<p style="color:red;">Prediction failed</p>`;
+    }
+
+    alert("Server error. Try again.");
   }
 }
 
@@ -147,30 +161,32 @@ function inspectDomain() {
   const panel = document.getElementById("inspectPanel");
   if (panel) panel.style.display = "flex";
 
-  const score = Number(data.risk_score ?? 0);
-  const label = data.label ?? "UNKNOWN";
-  const summary = data.summary ?? "";
+  const score = isNaN(Number(data.risk_score)) ? 0 : Number(data.risk_score);
+  const label = data.label || "UNKNOWN";
+  const summary = data.summary || "No insights available";
 
-  // 🎯 Gauge
-  Plotly.newPlot("miniGauge", [{
-    type: "indicator",
-    mode: "gauge+number",
-    value: score,
-    title: { text: "Risk Score" },
+  // 🎯 Safe Plotly rendering
+  if (typeof Plotly !== "undefined") {
+    Plotly.newPlot("miniGauge", [{
+      type: "indicator",
+      mode: "gauge+number",
+      value: score,
+      title: { text: "Risk Score" },
 
-    gauge: {
-      axis: { range: [0, 100] },
-      steps: [
-        { range: [0, 40], color: "#16a34a" },
-        { range: [40, 70], color: "#f59e0b" },
-        { range: [70, 100], color: "#ef4444" }
-      ]
-    }
+      gauge: {
+        axis: { range: [0, 100] },
+        steps: [
+          { range: [0, 40], color: "#16a34a" },
+          { range: [40, 70], color: "#f59e0b" },
+          { range: [70, 100], color: "#ef4444" }
+        ]
+      }
 
-  }], {
-    paper_bgcolor: "transparent",
-    font: { color: "#e2e8f0" }
-  });
+    }], {
+      paper_bgcolor: "transparent",
+      font: { color: "#e2e8f0" }
+    });
+  }
 
   // 🎯 Badge
   const badge = document.getElementById("miniBadge");
@@ -205,4 +221,3 @@ function goFullAnalysis() {
 
   window.location = "/explain?domain=" + encodeURIComponent(domain);
 }
-
