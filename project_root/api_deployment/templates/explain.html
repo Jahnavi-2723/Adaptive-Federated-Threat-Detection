@@ -122,9 +122,8 @@
 
 <script>
 async function explain() {
-
   const domain = document.getElementById('domain').value.trim();
-  if (!domain) return alert("Enter domain");
+  if (!domain) return alert("Please enter a domain!");
 
   document.getElementById('loader').style.display = "block";
   document.getElementById('resultCard').style.display = "none";
@@ -132,68 +131,56 @@ async function explain() {
   try {
     const res = await fetch('/predict', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({domain})
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain })
     });
 
     const data = await res.json();
-    console.log("API:", data);
+    console.log("EXPLAIN DATA:", data);
 
-    // ✅ SAFE extraction
+    // ✅ SAFE parsing
     const score = Number(data.risk_score ?? 0);
     const label = data.label ?? "UNKNOWN";
     const summary = data.summary ?? "No insights available";
-    const llm = data.llm_explanation ?? summary;
+    const llm = data.llm_explanation ?? "";
 
     document.getElementById('loader').style.display = "none";
-    document.getElementById('resultCard').style.display = "block";
 
-    // 🎯 Gauge
+    const card = document.getElementById('resultCard');
+    card.style.display = "block";
+
+    // ✅ FIXED GAUGE
     Plotly.newPlot("gauge", [{
-      type: "indicator",
-      mode: "gauge+number",
-      value: current,
-      title: { text: "Risk Score" },
-      gauge: {
-        axis: { range: [0, 100] },
-        steps: [
-          { range: [0, 40], color: "#1f7a1f" },
-          { range: [40, 70], color: "#e6b800" },
-          { range: [70, 100], color: "#cc0000" }
-        ]
-      }
-    }], {
-      paper_bgcolor:"#0f1116",
-      font:{color:"#eee"}
-    });
+    type: "indicator",
+    mode: "gauge+number",
+    value: score,   // ✅ direct use (no animation bug)
+    title: { text: "Risk Score" },
 
-    // 🎯 Badge
-    const badge = document.getElementById("badge");
-    badge.innerText = label;
+  gauge: {
+    axis: { range: [0, 100] },
+    steps: [
+      { range: [0, 40], color: "#1f7a1f" },
+      { range: [40, 70], color: "#e6b800" },
+      { range: [70, 100], color: "#cc0000" }
+    ]
+  }
+}], {
+  paper_bgcolor: "#0f1116",
+  font: { color: "#eee" }
+});
 
-    if (label === "SAFE") badge.style.background = "#1f7a1f";
-    else if (label === "SUSPICIOUS") badge.style.background = "#e6b800";
-    else badge.style.background = "#cc0000";
+    document.getElementById('summaryText').innerText =
+      `${summary} (${label})`;
 
-    // 🎯 Summary
-    document.getElementById("summary").innerText =`${summary} (${label})`;
+    document.getElementById("threatBadge").innerText = label;
 
-    // 🎯 Insight (dynamic)
-    document.getElementById("insight").innerHTML =
-      `<b>🛡 Security Insight</b><br>${summary}`;
-
-    // 🎯 Risk Factors (from summary)
-    document.getElementById("riskFactors").innerHTML =
-      `<b>⚠ Risk Indicators</b><br>${
-        summary.split("|").map(r => "• " + r.trim()).join("<br>")
-      }`;
-
-    // 🎯 LLM
-    document.getElementById("llm").innerText = llm;
+    document.getElementById("llmText").innerText =
+      llm || "No explanation available.";
 
   } catch (err) {
     console.error(err);
-    alert("Something went wrong");
+    alert("⚠️ Something went wrong. Check console.");
+    document.getElementById('loader').style.display = "none";
   }
 }
 
