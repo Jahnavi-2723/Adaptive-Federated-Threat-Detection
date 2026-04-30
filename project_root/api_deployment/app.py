@@ -263,6 +263,11 @@ def predict():
         "summary": summary
     })
 
+@app.route('/explain')
+def explain():
+    domain = request.args.get('domain', '')
+    return render_template('explain.html', initial_domain=domain)
+
 @app.route("/health")
 def health():
     return jsonify({
