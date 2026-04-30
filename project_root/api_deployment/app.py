@@ -122,20 +122,44 @@ def call_llm_summary(domain, score):
         return "LLM unavailable"
 
 
-def summarize_llm_note(text):
-    if not text:
-        return "Suspicious domain pattern"
+def summarize_llm_note(text, domain=None, score=None):
+    # Fallback if LLM text exists and useful
+    if text:
+        t = text.lower()
+        if "phishing" in t:
+            return "Potential phishing domain"
+        if "random" in t:
+            return "Random pattern, likely DGA"
+        if "safe" in t:
+            return "Likely safe domain"
 
-    text = text.lower()
+    # 🔥 Rule-based intelligence (fast + dynamic)
+    if domain:
+        d = domain.lower()
 
-    if "phishing" in text:
-        return "Potential phishing domain"
-    if "random" in text:
-        return "Random pattern, likely DGA"
-    if "safe" in text:
-        return "Likely safe domain"
+        if any(char.isdigit() for char in d):
+            return "Contains numeric patterns — suspicious"
 
-    return "Suspicious domain pattern"
+        if len(d) > 15:
+            return "Unusually long domain — possible DGA"
+
+        if "-" in d:
+            return "Contains hyphens — phishing indicator"
+
+        if d.count('.') > 2:
+            return "Multiple subdomains — suspicious structure"
+
+        if not d.endswith((".com", ".org", ".net")):
+            return "Uncommon TLD — higher risk"
+
+    # Score-based fallback
+    if score:
+        if score > 0.7:
+            return "High probability malicious domain"
+        elif score > 0.4:
+            return "Moderate risk domain"
+
+    return "Domain pattern requires caution"
 
 
 # ================= METRICS CACHE =================
@@ -196,7 +220,7 @@ def predict_domain():
         label = "MALICIOUS"
 
     llm_text = call_llm_summary(domain, score * 100)
-    summary = summarize_llm_note(llm_text)
+    summary = summarize_llm_note(llm_text, domain, score)
     #llm_text = "Analysis skipped for faster response"
     #summary = "Quick risk classification"
 
