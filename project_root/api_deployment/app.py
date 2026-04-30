@@ -47,10 +47,16 @@ app = Flask(
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(BASE_DIR, "federated_transformer.h5")
 
-if not os.path.exists(model_path):
-    raise FileNotFoundError(f"❌ Model not found at {model_path}")
+model = None
 
-model = load_model(model_path)
+def get_model():
+    global model
+    if model is None:
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"❌ Model not found at {model_path}")
+        model = load_model(model_path)
+        print("✅ Model loaded successfully")
+    return model
 
 # ================= DATABASE =================
 ensure_db()
@@ -180,7 +186,7 @@ def predict_domain():
         return jsonify({"error": "No domain provided"}), 400
 
     x_input = preprocess_domain(domain)
-    score = float(model.predict(x_input, verbose=0)[0][0])
+    score = float(get_model().predict(x_input, verbose=0)[0][0])
 
     if score < 0.4:
         label = "SAFE"
@@ -189,8 +195,10 @@ def predict_domain():
     else:
         label = "MALICIOUS"
 
-    llm_text = call_llm_summary(domain, score * 100)
-    summary = summarize_llm_note(llm_text)
+    #llm_text = call_llm_summary(domain, score * 100)
+    #summary = summarize_llm_note(llm_text)
+    llm_text = "Analysis skipped for faster response"
+    summary = "Quick risk classification"
 
     store_score = round(score * 100, 2)
 
