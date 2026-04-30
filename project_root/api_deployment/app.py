@@ -28,11 +28,97 @@ from project_root.api_deployment.model_loader import load_model
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, BASE_DIR)
 
+#Helper function
+import math
+import re
+
 from single_machine_federation.data_preprocessing import (
     clean_domain,
     create_dataset,
     encode_domain,
 )
+
+COMMON_BIGRAMS = [
+    "th","he","in","er","an","re","on","at","en","nd",
+    "ti","es","or","te","of","ed","is","it","al","ar"
+]
+
+SUSPICIOUS_TLDS = [".xyz", ".top", ".gq", ".tk", ".ml", ".ru", ".cn"]
+
+BRANDS = ["google", "paypal", "amazon", "facebook", "microsoft", "apple", "bank", "login", "secure"]
+
+
+def shannon_entropy(s):
+    prob = [float(s.count(c)) / len(s) for c in set(s)] if s else [1]
+    return -sum(p * math.log2(p) for p in prob)
+
+
+def bigram_score(s):
+    score = sum(1 for bg in COMMON_BIGRAMS if bg in s)
+    return score / len(COMMON_BIGRAMS)
+
+
+def has_brand(domain):
+    for b in BRANDS:
+        if b in domain:
+            return b
+    return None
+
+
+def has_suspicious_tld(domain):
+    return any(domain.endswith(tld) for tld in SUSPICIOUS_TLDS)
+
+#Analyzer
+
+def analyze_domain_research(domain, score):
+    d = domain.lower()
+    d_clean = re.sub(r'[^a-z0-9]', '', d)
+
+    insights = []
+
+    # Entropy
+    if len(d_clean) > 0:
+        entropy = shannon_entropy(d_clean)
+        if entropy > 3.8:
+            insights.append("High entropy (DGA-like)")
+
+    # Bigram
+    if bigram_score(d_clean) < 0.02:
+        insights.append("Low linguistic coherence")
+
+    # Digit ratio
+    digit_ratio = sum(c.isdigit() for c in d_clean) / max(len(d_clean), 1)
+    if digit_ratio > 0.2:
+        insights.append("High numeric density")
+
+    # Length
+    if len(d_clean) > 20:
+        insights.append("Excessively long domain")
+
+    # Brand abuse
+    brand = has_brand(d)
+    if brand:
+        insights.append(f"Brand impersonation ({brand})")
+
+    # Suspicious TLD
+    if has_suspicious_tld(d):
+        insights.append("High-risk TLD")
+
+    # Hyphens
+    if d.count('-') >= 2:
+        insights.append("Multiple hyphens (phishing pattern)")
+
+    # ML score fusion
+    if score > 0.8:
+        insights.append("High ML confidence")
+    elif score > 0.5:
+        insights.append("Moderate ML suspicion")
+
+    if not insights:
+        return "Domain appears legitimate"
+
+    return " | ".join(insights)
+
 
 # ================= FLASK INIT =================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -219,8 +305,10 @@ def predict_domain():
     else:
         label = "MALICIOUS"
 
-    llm_text = call_llm_summary(domain, score * 100)
-    summary = summarize_llm_note(llm_text, domain, score)
+    summary = analyze_domain_research(domain, score)
+    llm_text = summary
+    #llm_text = call_llm_summary(domain, score * 100)
+    #summary = summarize_llm_note(llm_text, domain, score)
     #llm_text = "Analysis skipped for faster response"
     #summary = "Quick risk classification"
 
