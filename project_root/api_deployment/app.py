@@ -154,6 +154,12 @@ def compute_real_metrics():
 def index():
     return render_template('index.html')
 
+@app.route("/")
+def home():
+    return {
+        "message": "Threat Detection API is running 🚀",
+        "status": "healthy"
+    }
 
 @app.route('/explain')
 def explain():
