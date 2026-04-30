@@ -35,18 +35,12 @@ from single_machine_federation.data_preprocessing import (
 )
 
 # ================= FLASK INIT =================
-BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(
     __name__,
-    template_folder=os.path.join(BASE_PATH, "api_deployment", "templates"),
-    static_folder=os.path.join(BASE_PATH, "api_deployment", "static")
-)
-
-app = Flask(
-    __name__,
-    template_folder=os.path.join(BASE_PATH, "templates"),
-    static_folder=os.path.join(BASE_PATH, "static")
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static")
 )
 
 # ================= LOAD MODEL =================
@@ -166,6 +160,10 @@ def home():
         "message": "Threat Detection API is running 🚀",
         "status": "healthy"
     }
+
+@app.route('/test')
+def test():
+    return "App working"
 
 @app.route('/explain')
 def explain():
