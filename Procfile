@@ -1,1 +1,1 @@
-web: gunicorn api_deployment.app:app
+web: gunicorn project_root.api_deployment.app:app
