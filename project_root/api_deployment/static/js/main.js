@@ -1,224 +1,65 @@
-/*let lastPrediction = null;
+let lastPrediction = null;
 
+// ================= PREDICT =================
 async function predict() {
-  const domain = document.getElementById("domain").value;
+  const domain = document.getElementById("domain").value.trim();
   if (!domain) return alert("Enter domain");
 
-  const res = await fetch("/predict", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({domain})
-  });
+  const resultDiv = document.getElementById("result");
+  resultDiv.innerHTML = `<p style="color:#94a3b8;">Analyzing...</p>`;
 
-  const data = await res.json();
-  lastPrediction = data;
+  try {
+    const res = await fetch("/predict", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ domain })
+    });
 
-  document.getElementById("result").innerHTML =
-    `<h3>${data.summary}</h3>
-     <p>${data.label} | ${(data.malicious_score*100).toFixed(2)}%</p>`;
+    const data = await res.json();
+    lastPrediction = data;
 
-  loadHistory();
+    const risk = Number(data.risk_score ?? 0);
+    const ml = Number(data.ml_score ?? 0);
+
+    resultDiv.innerHTML = `
+      <h3>${data.summary}</h3>
+      <p>
+        <strong>${data.label}</strong> |
+        Risk: ${risk.toFixed(2)}% |
+        ML: ${ml.toFixed(2)}%
+      </p>
+    `;
+
+  } catch (e) {
+    console.error(e);
+    resultDiv.innerHTML = `<p style="color:red;">Error</p>`;
+  }
 }
 
-function inspectDomain(){
+// ================= INSPECT =================
+function inspectDomain() {
+  const data = lastPrediction;
+  if (!data) return alert("Scan first");
 
-  const data = window.lastPrediction;
-  if(!data){
-    alert("⚠️ Please scan a domain first");
-    return;
-  }
+  document.getElementById("inspectPanel").style.display = "flex";
 
-  const panel = document.getElementById("inspectPanel");
-  panel.style.display = "flex";
+  const score = Number(data.risk_score ?? 0);
 
-  const score = data.malicious_score * 100;
-  const label = data.label;
-  const summary = data.summary;
-
-  // 🎯 Gauge
   Plotly.newPlot("miniGauge", [{
     type: "indicator",
     mode: "gauge+number",
     value: score,
     title: { text: "Risk Score" },
-
     gauge: {
       axis: { range: [0, 100] },
-
       steps: [
         { range: [0, 40], color: "#16a34a" },
         { range: [40, 70], color: "#f59e0b" },
         { range: [70, 100], color: "#ef4444" }
       ]
     }
+  }]);
 
-  }], {
-    paper_bgcolor: "transparent",
-    font: { color: "#e2e8f0" }
-  });
-
-  // 🎯 Badge Color Logic
-  const badge = document.getElementById("miniBadge");
-  badge.innerText = label;
-
-  if(label === "SAFE"){
-    badge.style.background = "#16a34a";
-  }
-  else if(label === "SUSPICIOUS"){
-    badge.style.background = "#f59e0b";
-  }
-  else{
-    badge.style.background = "#ef4444";
-  }
-
-  // 🎯 Summary
-  document.getElementById("miniSummary").innerText = summary;
-}
-
-function goFullAnalysis(){
-  const domain = document.getElementById("domain").value;
-  window.location = "/explain?domain=" + domain;
-}
-  */
-
-let lastPrediction = null;
-
-// ================= PREDICT =================
-async function predict() {
-  const domainInput = document.getElementById("domain");
-  const domain = domainInput ? domainInput.value.trim() : "";
-
-  if (!domain) {
-    alert("Enter domain");
-    return;
-  }
-
-  const resultDiv = document.getElementById("result");
-
-  // 🔄 Loading state
-  if (resultDiv) {
-    resultDiv.innerHTML = `<p style="color:#94a3b8;">Analyzing...</p>`;
-  }
-
-  try {
-    const res = await fetch("/predict", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ domain })
-    });
-
-    if (!res.ok) {
-      throw new Error("API failed");
-    }
-
-    const data = await res.json();
-    console.log("API RESPONSE:", data);
-
-    lastPrediction = data;
-
-    // ✅ Safe parsing (NO NaN EVER)
-    const riskScore = isNaN(Number(data.risk_score)) ? 0 : Number(data.risk_score);
-    const mlScore = isNaN(Number(data.ml_score)) ? 0 : Number(data.ml_score);
-    const label = data.label || "UNKNOWN";
-    const summary = data.summary || "No insights available";
-
-    // 🎯 UI Update
-    if (resultDiv) {
-      resultDiv.innerHTML = `
-        <h3>${summary}</h3>
-        <p>
-          <strong>${label}</strong> |
-          Risk: ${Number(data.risk_score ?? 0).toFixed(2)}%|
-          ML: ${mlScore.toFixed(2)}%
-        </p>
-      `;
-    }
-
-    loadHistory();
-
-  } catch (err) {
-    console.error("Prediction error:", err);
-
-    if (resultDiv) {
-      resultDiv.innerHTML = `<p style="color:red;">Prediction failed</p>`;
-    }
-
-    alert("Server error. Try again.");
-  }
-}
-
-// ================= INSPECT PANEL =================
-function inspectDomain() {
-  const data = lastPrediction;
-
-  if (!data) {
-    alert("⚠️ Please scan a domain first");
-    return;
-  }
-
-  const panel = document.getElementById("inspectPanel");
-  if (panel) panel.style.display = "flex";
-
-  //const score = isNaN(Number(data.risk_score)) ? 0 : Number(data.risk_score);
-  const score = Number(data.risk_score ?? 0);
-  const label = data.label || "UNKNOWN";
-  const summary = data.summary || "No insights available";
-
-  // 🎯 Safe Plotly rendering
-  if (typeof Plotly !== "undefined") {
-    Plotly.newPlot("miniGauge", [{
-      type: "indicator",
-      mode: "gauge+number",
-      value: score,
-      title: { text: "Risk Score" },
-
-      gauge: {
-        axis: { range: [0, 100] },
-        steps: [
-          { range: [0, 40], color: "#16a34a" },
-          { range: [40, 70], color: "#f59e0b" },
-          { range: [70, 100], color: "#ef4444" }
-        ]
-      }
-
-    }], {
-      paper_bgcolor: "transparent",
-      font: { color: "#e2e8f0" }
-    });
-  }
-
-  // 🎯 Badge
-  const badge = document.getElementById("miniBadge");
-  if (badge) {
-    badge.innerText = label;
-
-    if (label === "SAFE") {
-      badge.style.background = "#16a34a";
-    } else if (label === "SUSPICIOUS") {
-      badge.style.background = "#f59e0b";
-    } else {
-      badge.style.background = "#ef4444";
-    }
-  }
-
-  // 🎯 Summary
-  const summaryEl = document.getElementById("miniSummary");
-  if (summaryEl) {
-    summaryEl.innerText = summary;
-  }
-}
-
-// ================= NAVIGATION =================
-function goFullAnalysis() {
-  const domainInput = document.getElementById("domain");
-  const domain = domainInput ? domainInput.value.trim() : "";
-
-  if (!domain) {
-    alert("Enter a domain first");
-    return;
-  }
-
-  window.location = "/explain?domain=" + encodeURIComponent(domain);
+  document.getElementById("miniBadge").innerText = data.label;
+  document.getElementById("miniSummary").innerText = data.summary;
 }

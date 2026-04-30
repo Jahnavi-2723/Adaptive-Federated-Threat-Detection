@@ -135,7 +135,7 @@ def analyze_domain(domain, ml_score):
     if shannon_entropy(d_clean) > 3.8:
         insights.append("High entropy")
 
-    if bigram_score(d_clean) < 0.02:
+    if bigram_score(d_clean) < 0.01:
         insights.append("Non-linguistic pattern")
 
     if sum(c.isdigit() for c in d_clean)/max(len(d_clean),1) > 0.2:
@@ -170,17 +170,22 @@ def analyze_domain(domain, ml_score):
 # ================= RISK SCORE =================
 def compute_risk(domain, ml_score):
     score = ml_score * 50
+
     d_clean = re.sub(r'[^a-z0-9]', '', domain)
 
-    if shannon_entropy(d_clean) > 3.8: score += 10
-    if bigram_score(d_clean) < 0.02: score += 10
+    if d_clean:
+        if shannon_entropy(d_clean) > 3.8: score += 10
+        if bigram_score(d_clean) < 0.01: score += 10   # FIXED
+        if sum(c.isdigit() for c in d_clean)/len(d_clean) > 0.2: score += 8
+        if len(d_clean) > 20: score += 6
+
     if has_brand(domain): score += 10
     if detect_typosquat(d_clean): score += 12
     if detect_subdomain_phishing(domain): score += 12
     if has_suspicious_tld(domain): score += 8
     if domain.count('-') >= 2: score += 5
 
-    return min(round(score,2),100)
+    return min(round(score, 2), 100)
 
 # ================= MODEL =================
 model = None
@@ -232,9 +237,9 @@ def predict():
 
     risk = compute_risk(domain, ml_score)
 
-    if risk < 35:
+    if risk < 30:
         label = "SAFE"
-    elif risk < 65:
+    elif risk < 70:
         label = "SUSPICIOUS"
     else:
         label = "MALICIOUS"

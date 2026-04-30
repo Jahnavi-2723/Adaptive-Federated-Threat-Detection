@@ -80,7 +80,7 @@ async function inspectDomain() {
   Plotly.newPlot("miniGauge", [{
     type: "indicator",
     mode: "gauge+number",
-    value: data.risk_score * 100,
+    value: Number(data.risk_score ?? 0),
 
     number: {
       font: { size: 32 }   // bigger number
@@ -111,7 +111,7 @@ async function inspectDomain() {
       threshold: {
         line: { color: "#ffffff", width: 4 },
         thickness: 0.75,
-        value: data.risk_score * 100
+        value: Number(data.risk_score ?? 0)
       }
     }
   }], {

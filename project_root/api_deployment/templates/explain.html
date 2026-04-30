@@ -152,7 +152,7 @@ async function explain() {
     Plotly.newPlot("gauge", [{
       type: "indicator",
       mode: "gauge+number",
-      value: score,
+      value: current,
       title: { text: "Risk Score" },
       gauge: {
         axis: { range: [0, 100] },
@@ -176,7 +176,7 @@ async function explain() {
     else badge.style.background = "#cc0000";
 
     // 🎯 Summary
-    document.getElementById("summary").innerText = summary;
+    document.getElementById("summary").innerText =`${summary} (${label})`;
 
     // 🎯 Insight (dynamic)
     document.getElementById("insight").innerHTML =
