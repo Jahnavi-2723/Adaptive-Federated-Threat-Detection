@@ -50,7 +50,7 @@ model_path = os.path.join(BASE_DIR, "federated_transformer.h5")
 if not os.path.exists(model_path):
     raise FileNotFoundError(f"❌ Model not found at {model_path}")
 
-model = load_model(MODEL_PATH)
+model = load_model(model_path)
 
 # ================= DATABASE =================
 ensure_db()
