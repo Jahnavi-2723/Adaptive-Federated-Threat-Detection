@@ -44,11 +44,11 @@ app = Flask(
 )
 
 # ================= LOAD MODEL =================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(BASE_DIR, "federated_transformer.h5")
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "federated_transformer.h5")
-
-if not os.path.exists(MODEL_PATH):
-    raise RuntimeError("❌ Model file missing!")
+if not os.path.exists(model_path):
+    raise FileNotFoundError(f"❌ Model not found at {model_path}")
 
 model = load_model(MODEL_PATH)
 
