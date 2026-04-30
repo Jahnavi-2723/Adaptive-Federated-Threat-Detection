@@ -36,6 +36,21 @@ async function predict() {
   }
 }
 
+async function loadMetrics() {
+  try {
+    const res = await fetch("/metrics");
+    const data = await res.json();
+    document.getElementById("m-acc").innerText = (data.accuracy * 100).toFixed(2) + "%";
+document.getElementById("m-prec").innerText = (data.precision * 100).toFixed(2) + "%";
+document.getElementById("m-rec").innerText = (data.recall * 100).toFixed(2) + "%";
+document.getElementById("m-f1").innerText = (data.f1 * 100).toFixed(2) + "%";
+document.getElementById("m-roc").innerText = (data.roc_auc * 100).toFixed(2) + "%";
+
+  } catch (err) {
+    console.error("Metrics load failed:", err);
+  }
+}
+
 // ================= INSPECT =================
 function inspectDomain() {
   const data = lastPrediction;
@@ -63,3 +78,6 @@ function inspectDomain() {
   document.getElementById("miniBadge").innerText = data.label;
   document.getElementById("miniSummary").innerText = data.summary;
 }
+document.addEventListener("DOMContentLoaded", () => {
+  loadMetrics();
+});
