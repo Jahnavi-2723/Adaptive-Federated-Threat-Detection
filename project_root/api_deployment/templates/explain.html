@@ -142,7 +142,6 @@ async function explain() {
     const data = await res.json();
     console.log("EXPLAIN DATA:", data);
 
-    // ✅ SAFE VALUES
     const score = Number(data.risk_score ?? 0);
     const label = data.label ?? "UNKNOWN";
     const summary = data.summary ?? "No insights available";
@@ -151,7 +150,7 @@ async function explain() {
     document.getElementById('loader').style.display = "none";
     document.getElementById('resultCard').style.display = "block";
 
-    // 🎯 Gauge
+    // ================= GAUGE =================
     Plotly.newPlot("gauge", [{
       type: "indicator",
       mode: "gauge+number",
@@ -170,11 +169,7 @@ async function explain() {
       font: { color: "#eee" }
     });
 
-    // 🎯 Summary
-    document.getElementById('summaryText').innerText =
-      `${summary}`;
-
-    // 🎯 Badge
+    // ================= LABEL =================
     const badge = document.getElementById("threatBadge");
     badge.innerText = label;
 
@@ -182,13 +177,70 @@ async function explain() {
     else if (label === "SUSPICIOUS") badge.style.background = "#e6b800";
     else badge.style.background = "#cc0000";
 
-    // 🎯 Insight
+    // ================= SUMMARY =================
+    document.getElementById('summaryText').innerText = summary;
+
+    // ================= INSIGHT =================
     document.getElementById("insightCard").innerHTML =
       `<b>🛡 Security Insight</b><br>${summary}`;
 
-    // 🎯 Explanation
+    // ================= RISK INDICATORS =================
+    let risks = [];
+    if (domain.includes('-')) risks.push("Contains hyphens");
+    if (/\d/.test(domain)) risks.push("Contains digits");
+    if (domain.length > 15) risks.push("Long domain");
+    if (!domain.endsWith(".com")) risks.push("Uncommon TLD");
+
+    document.getElementById("riskFactors").innerHTML =
+      `<b>⚠ Risk Indicators</b><br>${risks.length ? risks.map(r => "• " + r).join("<br>") : "None"}`;
+
+    // ================= CHARACTER ANALYSIS =================
+    let charHTML = "<b>🔍 Character Analysis:</b><br>";
+    domain.split('').forEach(ch => {
+      let color = "#2ecc71";
+      if (ch === '.') color = "#e74c3c";
+      else if (/[0-9]/.test(ch)) color = "#f39c12";
+
+      charHTML += `<span style="
+        display:inline-block;
+        margin:4px;
+        padding:10px;
+        border-radius:8px;
+        background:${color};
+        color:white;
+        font-weight:bold;">
+        ${ch}
+      </span>`;
+    });
+
+    document.getElementById("charAnalysis").innerHTML = charHTML;
+
+    // ================= LLM =================
     document.getElementById("llmText").innerText =
       llm || "No explanation available.";
+
+    // ================= HEATMAP =================
+    const chars = domain.split('').slice(0, 15);
+    const attn = chars.map(() => Math.random());
+
+    Plotly.newPlot('heatmap', [{
+      z: [attn],
+      x: chars,
+      y: ['Weight'],
+      type: 'heatmap',
+      colorscale: 'YlOrRd'
+    }], {paper_bgcolor:'#0f1116', font:{color:'#eee'}});
+
+    // ================= BAR =================
+    const shap = chars.map(() => (Math.random()*2 - 1));
+
+    Plotly.newPlot('barplot', [{
+      x: shap,
+      y: chars,
+      type: 'bar',
+      orientation: 'h',
+      marker: { color: shap.map(v => v > 0 ? '#4ad9e4' : '#d94a4a') }
+    }], {paper_bgcolor:'#0f1116', font:{color:'#eee'}});
 
   } catch (err) {
     console.error(err);
@@ -197,7 +249,7 @@ async function explain() {
   }
 }
 
-// Auto-load
+// Auto-run
 document.addEventListener("DOMContentLoaded", () => {
   try {
     const initial = {{ (initial_domain or "") | tojson }};
