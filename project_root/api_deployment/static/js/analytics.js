@@ -19,7 +19,8 @@ async function predict() {
   const data = await res.json();
   window.lastPrediction = data;
 
-  const score = (data.malicious_score * 100).toFixed(2);
+  //const score = (data.malicious_score * 100).toFixed(2);
+  const score = Number(data.risk_score ?? 0);
 
   document.getElementById('result').innerHTML = `
     <div class="result-card">
@@ -79,7 +80,7 @@ async function inspectDomain() {
   Plotly.newPlot("miniGauge", [{
     type: "indicator",
     mode: "gauge+number",
-    value: data.malicious_score * 100,
+    value: data.risk_score * 100,
 
     number: {
       font: { size: 32 }   // bigger number
@@ -110,7 +111,7 @@ async function inspectDomain() {
       threshold: {
         line: { color: "#ffffff", width: 4 },
         thickness: 0.75,
-        value: data.malicious_score * 100
+        value: data.risk_score * 100
       }
     }
   }], {

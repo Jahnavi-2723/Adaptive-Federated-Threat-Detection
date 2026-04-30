@@ -130,7 +130,7 @@ async function predict() {
         <h3>${summary}</h3>
         <p>
           <strong>${label}</strong> |
-          Risk: ${riskScore.toFixed(2)}% |
+          Risk: ${Number(data.risk_score ?? 0).toFixed(2)}%|
           ML: ${mlScore.toFixed(2)}%
         </p>
       `;
@@ -161,7 +161,8 @@ function inspectDomain() {
   const panel = document.getElementById("inspectPanel");
   if (panel) panel.style.display = "flex";
 
-  const score = isNaN(Number(data.risk_score)) ? 0 : Number(data.risk_score);
+  //const score = isNaN(Number(data.risk_score)) ? 0 : Number(data.risk_score);
+  const score = Number(data.risk_score ?? 0);
   const label = data.label || "UNKNOWN";
   const summary = data.summary || "No insights available";
 
