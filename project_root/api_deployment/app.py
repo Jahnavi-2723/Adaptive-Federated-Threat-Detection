@@ -9,8 +9,6 @@ import numpy as np
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from flask import Flask, jsonify, render_template, request
-from history_db import ensure_db, insert_record, query_history
-from model_loader import load_model
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -18,6 +16,13 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
+
+from project_root.api_deployment.history_db import (
+    ensure_db,
+    insert_record,
+    query_history,
+)
+from project_root.api_deployment.model_loader import load_model
 
 # ================= PATH SETUP =================
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
