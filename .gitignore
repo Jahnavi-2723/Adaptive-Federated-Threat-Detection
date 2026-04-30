@@ -1,0 +1,19 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Databases
+*.db
+
+# IDE
+.vscode/
+.idea/
+
+# Large files
+datasets/
+
+# Model files (optional but recommended)
+*.h5

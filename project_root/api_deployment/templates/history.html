@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Domain History | Threat Detector</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body { background:#0f1116; color:#eee; font-family:'Poppins',sans-serif; }
+    header{background:#1f222a;padding:10px}
+    header h1{margin:0;color:#4ad9e4}
+    nav a{color:#4ad9e4;margin:0 10px;text-decoration:none}
+    .controls{padding:12px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px;border-bottom:1px solid #222}
+    .badge{padding:6px 10px;border-radius:6px;color:#000;font-weight:600}
+    .safe{background:#16a34a}
+    .susp{background:#f59e0b}
+    .mal{background:#ef4444}
+    button.inspect{padding:6px 10px;border-radius:6px;background:#4ad9e4;border:none;color:#000;cursor:pointer}
+    .filter-btn{padding:6px 10px;margin-right:6px;border-radius:6px;border:none;cursor:pointer}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📜 Domain Scan History</h1>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/explain">Explainability</a>
+    </nav>
+  </header>
+
+  <main style="padding:16px">
+    <div class="controls">
+      <button class="filter-btn" onclick="loadHistory('')">All</button>
+      <button class="filter-btn" onclick="loadHistory('malicious')">Malicious</button>
+      <button class="filter-btn" onclick="loadHistory('suspicious')">Suspicious</button>
+      <button class="filter-btn" onclick="loadHistory('safe')">Safe</button>
+      <input id="limit" type="number" value="200" style="margin-left:12px;width:80px;padding:6px;border-radius:6px"> 
+      <button class="filter-btn" onclick="loadHistory(currentFilter)">Refresh</button>
+    </div>
+
+    <div id="tableWrap">
+      <table id="historyTable">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Domain</th>
+            <th>Score (%)</th>
+            <th>Classification</th>
+            <th>Inspect</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/history.js') }}"></script>
+  <script>
+    let currentFilter = '';
+    // auto-load
+    loadHistory('');
+  </script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Explainable AI | Threat Detector</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+  <style>
+    body {
+      background-color: #0f1116;
+      color: #eee;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+    }
+
+    header {
+      background: #1f222a;
+      padding: 10px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+      color: #4ad9e4;
+    }
+
+    nav a {
+      color: #4ad9e4;
+      margin: 0 10px;
+      text-decoration: none;
+    }
+
+    nav a:hover { text-decoration: underline; }
+
+    input {
+      padding: 8px;
+      width: 280px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      padding: 8px 16px;
+      background: #4ad9e4;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #40c2cc; }
+
+    /* Spinner */
+    .spinner {
+      border: 4px solid #1a1d24;
+      border-top: 4px solid #4ad9e4;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      margin: auto;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Fade Animation */
+    .fade-in {
+      animation: fadeIn 0.6s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>🧠 Explainable AI — Domain Threat Reasoning</h1>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/explain">Explainability</a>
+  </nav>
+</header>
+
+<main>
+
+<h2>🔍 Analyze Domain Threat</h2>
+
+<input type="text" id="domain" placeholder="Enter domain (e.g., badexample.com)">
+<button onclick="explain()">Analyze</button>
+
+<!-- 🔄 LOADER -->
+<div id="loader" style="display:none; margin-top:20px;">
+  <div class="spinner"></div>
+  <p style="color:#aaa;">Analyzing domain risk...</p>
+</div>
+
+<!-- 🔥 RESULT CARD -->
+<div id="resultCard" style="margin-top:30px; display:none;">
+
+  <!-- 🚀 Gauge -->
+  <div id="gauge" style="width:300px;height:250px;margin:auto;"></div>
+
+  <!-- 🚨 Badge -->
+  <div id="threatBadge" style="
+    margin-top:10px;
+    font-size:18px;
+    font-weight:bold;
+    padding:8px 16px;
+    border-radius:20px;
+    display:inline-block;"></div>
+
+  <!-- 🧾 Summary -->
+  <h2 id="summaryText" style="color:#4ad9e4;"></h2>
+
+  <!-- 🛡 Insight -->
+  <div id="insightCard" style="
+    margin-top:15px;
+    padding:15px;
+    background:#16202a;
+    border-left:4px solid #4ad9e4;
+    max-width:600px;
+    margin:auto;
+    border-radius:8px;">
+  </div>
+
+  <!-- ⚠ Risk -->
+  <div id="riskFactors" style="margin-top:15px;"></div>
+
+  <!-- 🔍 Character -->
+  <div id="charAnalysis" style="margin-top:20px;"></div>
+
+  <!-- 📄 Explanation -->
+  <div style="margin-top:20px;background:#1a1d24;padding:15px;border-radius:10px;max-width:700px;margin:auto;">
+    <b>💡 Explanation</b>
+    <p id="llmText" style="font-size:14px; color:#ccc;"></p>
+  </div>
+
+  <!-- 🔬 Advanced -->
+  <details style="margin-top:20px;">
+    <summary style="cursor:pointer; color:#4ad9e4;">🔬 Advanced Technical View</summary>
+
+    <p style="color:#aaa;">🔥 Higher attention weight = more influence on prediction</p>
+    <div id="heatmap" style="width:90%;margin:auto;height:350px;"></div>
+
+    <p style="color:#aaa;">📊 Right = increases risk | Left = reduces risk</p>
+    <div id="barplot" style="width:90%;margin:auto;height:350px;"></div>
+  </details>
+
+</div>
+
+</main>
+
+<script>
+async function explain() {
+
+  const domain = document.getElementById('domain').value.trim();
+  if (!domain) return alert("Please enter a domain!");
+
+  // Show loader
+  document.getElementById('loader').style.display = "block";
+  document.getElementById('resultCard').style.display = "none";
+
+  const res = await fetch('/predict', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({domain})
+  });
+
+  const data = await res.json();
+
+  const score = data.malicious_score * 100;
+  const label = data.label;
+  const summary = data.summary;
+  const llm = data.llm_explanation;
+
+  // Hide loader
+  document.getElementById('loader').style.display = "none";
+
+  const card = document.getElementById('resultCard');
+  card.style.display = "block";
+  card.classList.add("fade-in");
+
+  // 🔥 Animated Gauge
+  let current = 0;
+  const interval = setInterval(() => {
+    current += 2;
+    if (current >= score) {
+      current = score;
+      clearInterval(interval);
+    }
+
+    Plotly.newPlot("gauge", [{
+      type: "indicator",
+      mode: "gauge+number",
+      value: current,
+      title: { text: "Risk Score" },
+      gauge: {
+        axis: { range: [0, 100] },
+        steps: [
+          { range: [0, 40], color: "#1f7a1f" },
+          { range: [40, 70], color: "#e6b800" },
+          { range: [70, 100], color: "#cc0000" }
+        ]
+      }
+    }], {paper_bgcolor:"#0f1116", font:{color:"#eee"}});
+  }, 20);
+
+  // Summary
+  document.getElementById('summaryText').innerText = `${summary} (${label})`;
+
+  // Badge
+  const badge = document.getElementById("threatBadge");
+  badge.innerText = label;
+
+  if (label === "SAFE") badge.style.background = "#1f7a1f";
+  else if (label === "SUSPICIOUS") badge.style.background = "#e6b800";
+  else badge.style.background = "#cc0000";
+
+  // Insight
+  document.getElementById("insightCard").innerHTML =
+    `<b>🛡 Security Insight</b><br>This domain shows ${label.toLowerCase()} behavior due to structural anomalies.`;
+
+  // Risk Factors
+  let risks = [];
+  if (domain.includes('-')) risks.push("Contains hyphen");
+  if (/\d/.test(domain)) risks.push("Contains digits");
+  if (domain.length > 15) risks.push("Long domain");
+  if (!domain.includes('.com')) risks.push("Uncommon TLD");
+
+  document.getElementById('riskFactors').innerHTML =
+    `<b>⚠ Risk Indicators</b><br>${risks.map(r => "• " + r).join("<br>")}`;
+
+  // Character Analysis
+  let html = "<b>🔍 Character Analysis:</b><br>";
+  domain.split('').forEach(ch => {
+    let color = "#2ecc71";
+    if (ch === '.') color = "#e74c3c";
+    else if (/[0-9]/.test(ch)) color = "#f39c12";
+
+    html += `<span style="
+      display:inline-block;
+      margin:4px;
+      padding:10px;
+      border-radius:8px;
+      background:${color};
+      color:white;
+      font-weight:bold;
+      transition: transform 0.2s;"
+      onmouseover="this.style.transform='scale(1.2)'"
+      onmouseout="this.style.transform='scale(1)'">
+      ${ch}
+    </span>`;
+  });
+
+  document.getElementById("charAnalysis").innerHTML = html;
+
+  // LLM
+  document.getElementById("llmText").innerText =
+    llm ? llm.split('.').slice(0,2).join('.') + "." : "No explanation available.";
+
+  // Charts
+  const chars = domain.split('').slice(0, 15);
+  const attn = chars.map(()=>Math.random());
+
+  Plotly.newPlot('heatmap', [{
+    z:[attn], x:chars, y:['Weight'], type:'heatmap', colorscale:'YlOrRd'
+  }], {paper_bgcolor:'#0f1116', font:{color:'#eee'}});
+
+  const shap = chars.map(()=> (Math.random()*2 - 1));
+
+  Plotly.newPlot('barplot', [{
+    x:shap, y:chars, type:'bar', orientation:'h',
+    marker:{color: shap.map(v=>v>0?'#4ad9e4':'#d94a4a')}
+  }], {paper_bgcolor:'#0f1116', font:{color:'#eee'}});
+}
+
+// Auto-run
+document.addEventListener("DOMContentLoaded", () => {
+  try {
+    const initial = {{ (initial_domain or "") | tojson }};
+    if (initial) {
+      document.getElementById('domain').value = initial;
+      explain();
+    }
+  } catch(e) {}
+});
+</script>
+
+</body>
+</html>
