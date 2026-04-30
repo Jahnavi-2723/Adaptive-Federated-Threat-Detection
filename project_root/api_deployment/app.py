@@ -39,6 +39,12 @@ BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 app = Flask(
     __name__,
+    template_folder=os.path.join(BASE_PATH, "api_deployment", "templates"),
+    static_folder=os.path.join(BASE_PATH, "api_deployment", "static")
+)
+
+app = Flask(
+    __name__,
     template_folder=os.path.join(BASE_PATH, "templates"),
     static_folder=os.path.join(BASE_PATH, "static")
 )
@@ -154,7 +160,7 @@ def compute_real_metrics():
 def index():
     return render_template('index.html')
 
-@app.route("/")
+@app.route('/health-ui')
 def home():
     return {
         "message": "Threat Detection API is running 🚀",
