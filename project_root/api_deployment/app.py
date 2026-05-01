@@ -10,6 +10,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from flask import Flask, jsonify, render_template, request
+from single_machine_federation.data_preprocessing import create_dataset
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -274,6 +275,33 @@ def health():
         "status":"running",
         "model_loaded": model is not None
     })
+
+def compute_real_metrics():
+    X, y_true = create_dataset()
+
+    model_instance = get_model()
+
+    y_pred_probs = model_instance.predict(X, verbose=0).flatten()
+    y_pred = (y_pred_probs > 0.5).astype(int)
+
+    return {
+        "accuracy": round(accuracy_score(y_true, y_pred), 3),
+        "precision": round(precision_score(y_true, y_pred, zero_division=0), 3),
+        "recall": round(recall_score(y_true, y_pred, zero_division=0), 3),
+        "f1": round(f1_score(y_true, y_pred, zero_division=0), 3),
+        "roc_auc": round(roc_auc_score(y_true, y_pred_probs), 3)
+    }
+
+cached_metrics = None
+
+@app.route('/metrics')
+def metrics():
+    global cached_metrics
+    if cached_metrics:
+        return jsonify(cached_metrics)
+
+    cached_metrics = compute_real_metrics()
+    return jsonify(cached_metrics)
 
 # ================= RUN =================
 if __name__ == "__main__":

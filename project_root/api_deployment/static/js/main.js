@@ -40,14 +40,87 @@ async function loadMetrics() {
   try {
     const res = await fetch("/metrics");
     const data = await res.json();
-    document.getElementById("m-acc").innerText = (data.accuracy * 100).toFixed(2) + "%";
-document.getElementById("m-prec").innerText = (data.precision * 100).toFixed(2) + "%";
-document.getElementById("m-rec").innerText = (data.recall * 100).toFixed(2) + "%";
-document.getElementById("m-f1").innerText = (data.f1 * 100).toFixed(2) + "%";
-document.getElementById("m-roc").innerText = (data.roc_auc * 100).toFixed(2) + "%";
+
+    document.getElementById("m-acc").innerText =
+      (data.accuracy * 100).toFixed(2) + "%";
+
+    document.getElementById("m-prec").innerText =
+      (data.precision * 100).toFixed(2) + "%";
+
+    document.getElementById("m-rec").innerText =
+      (data.recall * 100).toFixed(2) + "%";
+
+    document.getElementById("m-f1").innerText =
+      (data.f1 * 100).toFixed(2) + "%";
+
+    document.getElementById("m-roc").innerText =
+      (data.roc_auc * 100).toFixed(2) + "%";
 
   } catch (err) {
     console.error("Metrics load failed:", err);
+  }
+}
+
+async function loadAnalytics() {
+  try {
+    const res = await fetch("/analytics");
+    const data = await res.json();
+
+    // 📈 Accuracy Chart
+    new Chart(document.getElementById("accChart"), {
+      type: "line",
+      data: {
+        labels: data.epochs,
+        datasets: [
+          { label: "Train Accuracy", data: data.train_acc },
+          { label: "Validation Accuracy", data: data.val_acc }
+        ]
+      }
+    });
+
+    // 📉 Loss Chart
+    new Chart(document.getElementById("lossChart"), {
+      type: "line",
+      data: {
+        labels: data.epochs,
+        datasets: [
+          { label: "Train Loss", data: data.train_loss },
+          { label: "Validation Loss", data: data.val_loss }
+        ]
+      }
+    });
+
+    // 📊 Confusion Matrix
+    new Chart(document.getElementById("cmChart"), {
+      type: "bar",
+      data: {
+        labels: ["TN", "FP", "FN", "TP"],
+        datasets: [{
+          label: "Confusion Matrix",
+          data: [
+            data.confusion_matrix.tn,
+            data.confusion_matrix.fp,
+            data.confusion_matrix.fn,
+            data.confusion_matrix.tp
+          ]
+        }]
+      }
+    });
+
+    // 📊 Model Comparison
+    new Chart(document.getElementById("cmpChart"), {
+      type: "bar",
+      data: {
+        labels: data.comparison.models,
+        datasets: [{
+          label: "Accuracy (%)",
+          data: data.comparison.accuracy
+        }]
+      }
+    });
+
+  } catch (err) {
+    console.error("Analytics load failed:", err);
   }
 }
 
@@ -78,6 +151,8 @@ function inspectDomain() {
   document.getElementById("miniBadge").innerText = data.label;
   document.getElementById("miniSummary").innerText = data.summary;
 }
+
 document.addEventListener("DOMContentLoaded", () => {
   loadMetrics();
+  loadAnalytics();
 });
