@@ -290,6 +290,16 @@ def simple_char_importance(domain):
 
     return chars, scores.tolist()
 
+def generate_llm_explanation(domain, label, summary):
+    if label == "SAFE":
+        return f"The domain '{domain}' appears legitimate with no major suspicious indicators."
+
+    elif label == "SUSPICIOUS":
+        return f"The domain '{domain}' shows suspicious patterns such as {summary}. Avoid entering sensitive information."
+
+    else:
+        return f"The domain '{domain}' is likely malicious due to {summary}. It may be used for phishing or fraud."
+
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.get_json()
@@ -327,16 +337,18 @@ def predict():
         summary,
         summary
     )
+    
+    llm_text = generate_llm_explanation(domain, label, summary)
 
     return jsonify({
-        "domain": domain,
-        "ml_score": round(ml_score*100,2),
-        "risk_score": risk,
-        "label": label,
-        "summary": summary,
-
+    "domain": domain,
+    "ml_score": round(ml_score*100,2),
+    "risk_score": risk,
+    "label": label,
+    "summary": summary,
+    "llm_explanation": llm_text,
         # 🔥 NEW FIELD
-        "char_importance": {
+    "char_importance": {
             "chars": chars,
             "scores": importance
         }
