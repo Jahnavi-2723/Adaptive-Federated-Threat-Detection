@@ -21,14 +21,29 @@ async function predict() {
     const risk = Number(data.risk_score ?? 0);
     const ml = Number(data.ml_score ?? 0);
 
-    resultDiv.innerHTML = `
-      <h3>${data.summary}</h3>
-      <p>
-        <strong>${data.label}</strong> |
-        Risk: ${risk.toFixed(2)}% |
-        ML: ${ml.toFixed(2)}%
-      </p>
-    `;
+    const summary = data.summary ?? "No insights available";
+const llm = data.llm_explanation ?? summary;
+
+resultDiv.innerHTML = `
+  <h3>${summary}</h3>
+
+  <div style="
+    margin-top:10px;
+    padding:12px;
+    background:#16202a;
+    border-left:4px solid #4ad9e4;
+    border-radius:8px;
+  ">
+    <b>💡 Insight</b><br>
+    ${llm}
+  </div>
+
+  <p style="margin-top:10px;">
+    <strong>${label}</strong> |
+    Risk: ${riskScore.toFixed(2)}% |
+    ML: ${mlScore.toFixed(2)}%
+  </p>
+`;
 
   } catch (e) {
     console.error(e);
