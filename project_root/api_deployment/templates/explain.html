@@ -148,8 +148,8 @@ Heatmap = importance of characters
 Bar chart = contribution to risk
 </p>
 
-<div id="heatmap"></div>
-<div id="barplot"></div>
+<div id="heatmap" style="width:100%;height:250px;"></div>
+<div id="barplot" style="width:100%;height:350px;margin-top:20px;"></div>
 
 </details>
 
@@ -318,36 +318,61 @@ document.getElementById("charAnalysis").innerHTML = charHTML;
     llm || "No additional explanation";
 
   // ADVANCED DARK FIX
-  const chars=domain.split('').slice(0,15);
+  // ================= REAL EXPLAINABILITY =================
+const chars = data.char_importance?.chars || [];
+const scores = data.char_importance?.scores || [];
 
-  Plotly.newPlot('heatmap',[{
-    z:[chars.map(()=>Math.random())],
-    x:chars,
-    type:'heatmap'
-  }],{
-    paper_bgcolor:"#0b1220",
-    plot_bgcolor:"#0b1220",
-    font:{color:"#e5e7eb"}
+// Safety fallback
+if (!chars.length || !scores.length) {
+  document.getElementById("heatmap").innerHTML = "No explainability data";
+  document.getElementById("barplot").innerHTML = "";
+} else {
+
+  // 🔥 HEATMAP (Character Importance)
+  Plotly.newPlot('heatmap', [{
+    z: [scores],
+    x: chars,
+    type: 'heatmap',
+    colorscale: 'YlOrRd'
+  }], {
+    paper_bgcolor: "#0b1220",
+    plot_bgcolor: "#0b1220",
+    font: { color: "#e5e7eb" }
   });
 
-  Plotly.newPlot('barplot',[{
-  x:chars.map((c,i)=>hashToNumber(domain,i)),
-  y:chars,
-  type:'bar',
-  orientation:'h',
-  marker:{
-    color: chars.map((c,i)=>hashToNumber(domain,i)>0 ? '#4ad9e4' : '#ef4444')
-  }
-}],{
-  paper_bgcolor:"#0b1220",
-  plot_bgcolor:"#0b1220",
-  font:{color:"#e5e7eb"},
-  xaxis:{
-    title:"Impact on Prediction",
-    zeroline:true,
-    zerolinecolor:"#888"
-  }
-});
+  // 🔥 FEATURE CONTRIBUTION (SORTED)
+  const pairs = chars.map((c, i) => ({
+    char: c,
+    val: scores[i]
+  }));
+
+  // Sort by importance
+  pairs.sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
+
+  const xVals = pairs.map(p => p.val);
+  const yVals = pairs.map(p => p.char);
+
+  Plotly.newPlot('barplot', [{
+    x: xVals,
+    y: yVals,
+    type: 'bar',
+    orientation: 'h',
+    marker: {
+      color: xVals.map(v => v > 0.5 ? '#ef4444' : '#4ad9e4')
+    }
+  }], {
+    paper_bgcolor: "#0b1220",
+    plot_bgcolor: "#0b1220",
+    font: { color: "#e5e7eb" },
+    xaxis: {
+      title: "Model Influence",
+      zeroline: true,
+      zerolinecolor: "#888"
+    },
+    margin: { l: 40 }
+  });
+
+}
 }
 </script>
 

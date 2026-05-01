@@ -5,6 +5,7 @@ import sys
 from datetime import datetime
 
 import matplotlib
+import tensorflow as tf
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -202,6 +203,37 @@ def get_model():
         print("✅ Model loaded")
     return model
 
+
+def get_char_importance(model, tokenizer, domain, max_len=50):
+    try:
+        # Encode input
+        seq = tokenizer.texts_to_sequences([domain])
+        padded = tf.keras.preprocessing.sequence.pad_sequences(seq, maxlen=max_len)
+
+        input_tensor = tf.convert_to_tensor(padded)
+
+        with tf.GradientTape() as tape:
+            tape.watch(input_tensor)
+            preds = model(input_tensor)
+            loss = preds[:, 0]  # assuming binary output
+
+        grads = tape.gradient(loss, input_tensor)
+
+        # Convert to numpy
+        grads = grads.numpy()[0]
+
+        # Normalize
+        importance = np.abs(grads)
+        importance = importance / (np.max(importance) + 1e-8)
+
+        chars = list(domain)[:max_len]
+
+        return chars, importance[:len(chars)].tolist()
+
+    except Exception as e:
+        print("Explainability error:", e)
+        return [], []
+
 # ================= FLASK =================
 app = Flask(__name__,
     template_folder=os.path.join(os.path.dirname(__file__), "templates"),
@@ -220,6 +252,43 @@ def preprocess(domain):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+import numpy as np
+
+
+def simple_char_importance(domain):
+    """
+    Lightweight, deterministic explainability
+    (No TensorFlow gradients → safe for deployment)
+    """
+
+    chars = list(domain)
+    scores = []
+
+    for ch in chars:
+        score = 0
+
+        # 🔴 risky signals
+        if ch.isdigit():
+            score += 0.8
+        elif ch in ['-', '@', '.', '%']:
+            score += 0.6
+
+        # 🟡 suspicious letters
+        elif ch in ['x','z','q']:
+            score += 0.5
+
+        # 🟢 normal
+        else:
+            score += 0.2
+
+        scores.append(score)
+
+    # normalize 0 → 1
+    scores = np.array(scores)
+    scores = scores / (scores.max() + 1e-8)
+
+    return chars, scores.tolist()
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -247,6 +316,9 @@ def predict():
 
     summary = analyze_domain(domain, ml_score)
 
+    # 🔥 ADD THIS LINE
+    chars, importance = simple_char_importance(domain)
+
     insert_record(
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         domain,
@@ -261,8 +333,15 @@ def predict():
         "ml_score": round(ml_score*100,2),
         "risk_score": risk,
         "label": label,
-        "summary": summary
+        "summary": summary,
+
+        # 🔥 NEW FIELD
+        "char_importance": {
+            "chars": chars,
+            "scores": importance
+        }
     })
+
 
 @app.route('/explain')
 def explain():
