@@ -8,41 +8,44 @@
 
 <style>
 body {
-  background:#0f1116;
-  color:#eee;
+  background:#0b1220;
+  color:#e5e7eb;
   font-family:'Poppins', sans-serif;
   text-align:center;
 }
 
 header {
-  background:#1f222a;
-  padding:10px;
+  background:#111827;
+  padding:12px;
 }
 
 header h1 { color:#4ad9e4; }
 
 input {
-  padding:8px;
-  width:300px;
-  border-radius:8px;
+  padding:10px;
+  width:320px;
+  border-radius:10px;
   border:none;
 }
 
 button {
-  padding:8px 16px;
+  padding:10px 18px;
   background:#4ad9e4;
-  color:#000;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   cursor:pointer;
 }
 
+.container {
+  max-width:900px;
+  margin:auto;
+}
+
 .card {
-  background:#16202a;
-  padding:15px;
-  border-radius:10px;
-  max-width:650px;
-  margin:15px auto;
+  background:#1f2937;
+  padding:18px;
+  border-radius:14px;
+  margin:15px 0;
   text-align:left;
 }
 
@@ -51,23 +54,18 @@ button {
   border-radius:20px;
   font-weight:bold;
   display:inline-block;
-}
-
-.legend {
   margin-top:10px;
-  font-size:13px;
 }
 
-.legend span {
-  padding:5px 10px;
-  border-radius:6px;
-  margin:3px;
-  display:inline-block;
-}
+.green { background:#16a34a; }
+.yellow { background:#facc15; color:black; }
+.red { background:#ef4444; }
 
-.green { background:#1f7a1f; }
-.yellow { background:#e6b800; color:black; }
-.red { background:#cc0000; }
+.grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+}
 
 .spinner {
   border:4px solid #1a1d24;
@@ -91,70 +89,87 @@ button {
   <h1>🧠 Explainable AI — Domain Threat Reasoning</h1>
 </header>
 
+<div class="container">
+
 <h2>🔍 Analyze Domain</h2>
 
-<input id="domain" placeholder="Enter domain">
+<input id="domain">
 <button onclick="explain()">Analyze</button>
 
 <div id="loader" style="display:none;margin-top:20px;">
   <div class="spinner"></div>
-  <p>Analyzing...</p>
 </div>
 
 <div id="resultCard" style="display:none;">
 
-  <!-- 🎯 DECISION -->
-  <h2 id="headline"></h2>
-  <p id="action" style="color:#facc15;"></p>
+<!-- 🔥 DECISION -->
+<h2 id="headline"></h2>
+<p id="action" style="color:#facc15;"></p>
 
-  <!-- 📊 GAUGE -->
-  <div id="gauge" style="width:300px;height:250px;margin:auto;"></div>
+<!-- 🎯 GAUGE -->
+<div id="gauge"></div>
 
-  <!-- 🏷 LABEL -->
-  <div id="badge" class="badge"></div>
+<div id="badge" class="badge"></div>
 
-  <!-- 🛡 INSIGHT -->
-  <div class="card" id="insightCard"></div>
+<!-- GRID LAYOUT -->
+<div class="grid">
 
-  <!-- ⚠ RISK -->
-  <div class="card" id="riskFactors"></div>
+<div class="card">
+<b>🛡 Why flagged</b>
+<p id="summaryText"></p>
+</div>
 
-  <!-- 🔍 CHARACTER -->
-  <div class="card">
-    <b>🔍 Character Analysis</b>
-    <div id="charAnalysis"></div>
+<div class="card">
+<b>⚠ Risk Indicators</b>
+<p id="riskFactors"></p>
+</div>
 
-    <!-- 🎨 LEGEND -->
-    <div class="legend">
-      <span class="green">Normal</span>
-      <span class="yellow">Digits / unusual</span>
-      <span class="red">Special / separators</span>
-    </div>
-  </div>
+</div>
 
-  <!-- 💡 EXPLANATION -->
-  <div class="card">
-    <b>💡 Explanation</b>
-    <p id="llmText"></p>
-  </div>
+<div class="card">
+<b>🔍 Character Analysis</b>
+<div id="charAnalysis"></div>
+<p style="margin-top:10px;font-size:13px;">
+🟢 Normal | 🟡 Digits | 🔴 Special
+</p>
+</div>
 
-  <!-- 🔬 ADVANCED (COLLAPSIBLE) -->
-  <details class="card">
-    <summary>🔬 Advanced Technical Details</summary>
+<div class="card">
+<b>💡 Explanation</b>
+<p id="llmText"></p>
+</div>
 
-    <p style="font-size:13px;color:#aaa;">
-      Heatmap → importance of each character  
-      Bar chart → contribution to risk (right = risky)
-    </p>
+<!-- 🔬 ADVANCED -->
+<details class="card">
+<summary>🔬 Advanced Technical Details</summary>
 
-    <div id="heatmap" style="height:300px;"></div>
-    <div id="barplot" style="height:300px;"></div>
+<p style="font-size:13px;color:#9ca3af;">
+Heatmap = importance of characters  
+Bar chart = contribution to risk
+</p>
 
-  </details>
+<div id="heatmap"></div>
+<div id="barplot"></div>
+
+</details>
+
+</div>
 
 </div>
 
 <script>
+
+// 🔥 AUTO LOAD DOMAIN FROM URL
+document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const d = params.get("domain");
+
+  if (d) {
+    document.getElementById("domain").value = d;
+    explain();
+  }
+});
+
 async function explain() {
 
   const domain = document.getElementById('domain').value.trim();
@@ -179,41 +194,47 @@ async function explain() {
   const summary = data.summary;
   const llm = data.llm_explanation;
 
-  // 🎯 USER DECISION
+  // 🎯 DECISION TEXT
   let headline="", action="";
 
   if(label==="SAFE"){
-    headline="✅ This domain looks safe";
-    action="You can proceed normally.";
+    headline="✅ Safe domain";
+    action="You can proceed.";
   }
   else if(label==="SUSPICIOUS"){
-    headline="⚠️ This domain is suspicious";
-    action="Avoid entering sensitive information.";
+    headline="⚠️ Suspicious domain";
+    action="Avoid sensitive data.";
   }
   else{
-    headline="🚨 High Risk Domain";
-    action="Do NOT trust this domain.";
+    headline="🚨 Malicious domain";
+    action="Do NOT trust.";
   }
 
   document.getElementById("headline").innerText=headline;
   document.getElementById("action").innerText=action;
 
-  // 📊 GAUGE
+  // 🎯 GAUGE FIXED
   Plotly.newPlot("gauge",[{
     type:"indicator",
-    mode:"gauge+number",
+    mode:"gauge+number+delta",
     value:score,
+    number:{suffix:"%"},
     gauge:{
       axis:{range:[0,100]},
+      bar:{color:"#4ad9e4"},  // 🔥 FIX needle
       steps:[
-        {range:[0,40],color:"#1f7a1f"},
-        {range:[40,70],color:"#e6b800"},
-        {range:[70,100],color:"#cc0000"}
+        {range:[0,40],color:"#16a34a"},
+        {range:[40,70],color:"#facc15"},
+        {range:[70,100],color:"#ef4444"}
       ]
     }
-  }]);
+  }],{
+    paper_bgcolor:"#0b1220",
+    plot_bgcolor:"#0b1220",
+    font:{color:"#e5e7eb"}
+  });
 
-  // 🏷 BADGE
+  // BADGE
   const badge=document.getElementById("badge");
   badge.innerText=label;
   badge.className="badge "+(
@@ -221,50 +242,58 @@ async function explain() {
     label==="SUSPICIOUS"?"yellow":"red"
   );
 
-  // 🛡 INSIGHT
-  document.getElementById("insightCard").innerHTML=
-    "<b>🛡 Why flagged:</b><br>"+summary;
+  // SUMMARY
+  document.getElementById("summaryText").innerText=summary;
 
-  // ⚠ RISK
+  // RISKS
   let risks=[];
-  if(domain.includes('-')) risks.push("Suspicious hyphen usage");
-  if(/\d/.test(domain)) risks.push("Contains numbers");
-  if(domain.length>15) risks.push("Unusually long");
+  if(domain.includes('-')) risks.push("Hyphen usage");
+  if(/\d/.test(domain)) risks.push("Contains digits");
+  if(domain.length>15) risks.push("Long domain");
   if(!domain.endsWith(".com")) risks.push("Uncommon TLD");
 
   document.getElementById("riskFactors").innerHTML=
-    "<b>⚠ Risk Indicators</b><br>"+(risks.join("<br>")||"None");
+    risks.length?risks.join("<br>"):"None";
 
-  // 🔍 CHAR
+  // CHAR ANALYSIS
   let html="";
   domain.split('').forEach(c=>{
-    let color="#1f7a1f";
-    if(c==='.') color="#cc0000";
-    else if(/[0-9]/.test(c)) color="#e6b800";
+    let color="#16a34a";
+    if(c==='.') color="#ef4444";
+    else if(/[0-9]/.test(c)) color="#facc15";
 
-    html+=`<span style="background:${color};padding:8px;margin:3px;border-radius:6px;">${c}</span>`;
+    html+=`<span style="background:${color};padding:6px;margin:3px;border-radius:6px;">${c}</span>`;
   });
+
   document.getElementById("charAnalysis").innerHTML=html;
 
-  // 💡 LLM
+  // LLM
   document.getElementById("llmText").innerText=
-    llm||"No additional explanation";
+    llm || "No additional explanation";
 
-  // 🔬 ADVANCED
+  // ADVANCED DARK FIX
   const chars=domain.split('').slice(0,15);
 
   Plotly.newPlot('heatmap',[{
     z:[chars.map(()=>Math.random())],
     x:chars,
     type:'heatmap'
-  }]);
+  }],{
+    paper_bgcolor:"#0b1220",
+    plot_bgcolor:"#0b1220",
+    font:{color:"#e5e7eb"}
+  });
 
   Plotly.newPlot('barplot',[{
     x:chars.map(()=>Math.random()*2-1),
     y:chars,
     type:'bar',
     orientation:'h'
-  }]);
+  }],{
+    paper_bgcolor:"#0b1220",
+    plot_bgcolor:"#0b1220",
+    font:{color:"#e5e7eb"}
+  });
 }
 </script>
 
