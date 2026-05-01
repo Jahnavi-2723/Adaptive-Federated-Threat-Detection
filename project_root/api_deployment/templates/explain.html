@@ -184,6 +184,11 @@ async function explain() {
     body:JSON.stringify({domain})
   });
 
+  if(!res.ok){
+  alert("Server error");
+  return;
+  }
+
   const data = await res.json();
 
   document.getElementById('loader').style.display = "none";
@@ -216,7 +221,7 @@ async function explain() {
   // 🎯 GAUGE FIXED
   Plotly.newPlot("gauge",[{
     type:"indicator",
-    mode:"gauge+number+delta",
+    mode:"gauge+number",
     value:score,
     number:{suffix:"%"},
     gauge:{
@@ -255,18 +260,59 @@ async function explain() {
   document.getElementById("riskFactors").innerHTML=
     risks.length?risks.join("<br>"):"None";
 
-  // CHAR ANALYSIS
-  let html="";
-  domain.split('').forEach(c=>{
-    let color="#16a34a";
-    if(c==='.') color="#ef4444";
-    else if(/[0-9]/.test(c)) color="#facc15";
+// ================= CHARACTER ANALYSIS =================
+let charHTML = `
+<div style="margin-top:10px; line-height:2;">
+`;
 
-    html+=`<span style="background:${color};padding:6px;margin:3px;border-radius:6px;">${c}</span>`;
-  });
+domain.split('').forEach(c => {
+  let color = "#16a34a"; // normal
+  let label = "Normal";
 
-  document.getElementById("charAnalysis").innerHTML=html;
+  if (/[0-9]/.test(c)) {
+    color = "#facc15";
+    label = "Digit";
+  } else if (c === '.' || c === '-' || c === '@') {
+    color = "#ef4444";
+    label = "Special";
+  }
 
+  charHTML += `
+    <span title="${label}" style="
+      display:inline-block;
+      min-width:32px;
+      padding:8px;
+      margin:6px;
+      border-radius:8px;
+      background:${color};
+      color:#000;
+      font-weight:bold;
+      text-align:center;
+      font-size:14px;
+    ">
+      ${c}
+    </span>
+  `;
+});
+
+charHTML += `
+</div>
+
+<div style="
+  margin-top:12px;
+  display:flex;
+  justify-content:center;
+  gap:20px;
+  font-size:14px;
+  color:#cbd5f5;
+">
+  <span>🟢 Normal</span>
+  <span>🟡 Digits</span>
+  <span>🔴 Special</span>
+</div>
+`;
+
+document.getElementById("charAnalysis").innerHTML = charHTML;
   // LLM
   document.getElementById("llmText").innerText=
     llm || "No additional explanation";
@@ -285,15 +331,23 @@ async function explain() {
   });
 
   Plotly.newPlot('barplot',[{
-    x:chars.map(()=>Math.random()*2-1),
-    y:chars,
-    type:'bar',
-    orientation:'h'
-  }],{
-    paper_bgcolor:"#0b1220",
-    plot_bgcolor:"#0b1220",
-    font:{color:"#e5e7eb"}
-  });
+  x:chars.map((c,i)=>hashToNumber(domain,i)),
+  y:chars,
+  type:'bar',
+  orientation:'h',
+  marker:{
+    color: chars.map((c,i)=>hashToNumber(domain,i)>0 ? '#4ad9e4' : '#ef4444')
+  }
+}],{
+  paper_bgcolor:"#0b1220",
+  plot_bgcolor:"#0b1220",
+  font:{color:"#e5e7eb"},
+  xaxis:{
+    title:"Impact on Prediction",
+    zeroline:true,
+    zerolinecolor:"#888"
+  }
+});
 }
 </script>
 
