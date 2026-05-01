@@ -10,7 +10,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from flask import Flask, jsonify, render_template, request
-from single_machine_federation.data_preprocessing import create_dataset
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -25,6 +24,7 @@ from project_root.api_deployment.history_db import (
     query_history,
 )
 from project_root.api_deployment.model_loader import load_model
+from project_root.single_machine_federation.data_preprocessing import create_dataset
 
 # ================= PATH SETUP =================
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
