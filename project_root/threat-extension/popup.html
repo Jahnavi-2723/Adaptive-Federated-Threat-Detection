@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+  <style>
+    body {
+      width: 320px;
+      background:#0b1220;
+      color:#fff;
+      font-family: Arial;
+      text-align:center;
+      padding:10px;
+    }
+
+    .badge {
+      padding:6px 12px;
+      border-radius:20px;
+      margin-top:10px;
+      display:inline-block;
+      font-weight:bold;
+    }
+
+    .safe { background:#16a34a; }
+    .suspicious { background:#facc15; color:black; }
+    .malicious { background:#ef4444; }
+
+    .card {
+      margin-top:10px;
+      padding:10px;
+      background:#1f2937;
+      border-radius:10px;
+      font-size:13px;
+    }
+  </style>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h3>🔍 Domain Scan</h3>
+
+<p id="domain"></p>
+
+<div id="badge"></div>
+
+<div id="score"></div>
+
+<div id="insight" class="card"></div>
+
+<script src="popup.js"></script>
+
+</body>
+</html>

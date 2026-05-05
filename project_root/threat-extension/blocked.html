@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Blocked</title>
+<style>
+body {
+  background:#0b1220;
+  color:white;
+  text-align:center;
+  font-family:sans-serif;
+  padding-top:100px;
+}
+
+.box {
+  background:#1f2937;
+  padding:30px;
+  border-radius:12px;
+  display:inline-block;
+}
+
+button {
+  margin-top:20px;
+  padding:10px 20px;
+  background:#ef4444;
+  border:none;
+  color:white;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>🚫 Malicious Site Blocked</h2>
+  <p id="domain"></p>
+
+  <button onclick="goBack()">Go Back</button>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+document.getElementById("domain").innerText =
+  "Blocked domain: " + params.get("domain");
+
+function goBack() {
+  history.back();
+}
+</script>
+
+</body>
+</html>

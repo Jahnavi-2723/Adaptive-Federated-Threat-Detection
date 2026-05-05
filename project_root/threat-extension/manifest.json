@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Threat Detection Extension",
+  "version": "1.0",
+
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs",
+    "webNavigation"
+  ],
+
+  "host_permissions": [
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
